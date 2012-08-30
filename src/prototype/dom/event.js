@@ -244,10 +244,7 @@
 
     // Fix a Safari bug where a text node gets passed as the target of an
     // anchor click rather than the anchor itself.
-    if (node.nodeType == Node.TEXT_NODE)
-      node = node.parentNode;
-
-    return Element.extend(node);
+    return node.nodeType == Node.TEXT_NODE ? node.parentNode : node;
   }
 
   /**
@@ -260,8 +257,7 @@
    *  its ancestor chain. If `expression` is not given, the element which fired
    *  the event is returned.
    *  
-   *  *If no matching element is found, the document itself (`HTMLDocument` node)
-   *  is returned.*
+   *  *If no matching element is found, `undefined` is returned.*
    *  
    *  ##### Example
    *  
@@ -270,15 +266,15 @@
    *  
    *      document.observe('click', function(event) {
    *        var element = event.findElement('p');
-   *        if (element != document)
+   *        if (element)
    *          $(element).hide();
    *      });
   **/
   function findElement(event, expression) {
-    var element = _element(event), match = Prototype.Selector.match;
+    var element = _element(event), selector = Prototype.Selector;
     if (!expression) return Element.extend(element);
     while (element) {
-      if (Object.isElement(element) && match(element, expression))
+      if (Object.isElement(element) && selector.match(element, expression))
         return Element.extend(element);
       element = element.parentNode;
     }
@@ -1276,7 +1272,7 @@
     stopObserving: stopObserving.methodize(),
     
     /**
-     *  Element.on(@element, eventName[, selector], callback) -> Event.Handler
+     *  document.on(@element, eventName[, selector], callback) -> Event.Handler
      *  
      *  See [[Event.on]].
     **/
@@ -1331,9 +1327,9 @@
       return createMouseEnterLeaveResponder(uid, eventName, handler);
     
     return function(event) {
-      var cacheEntry = Event.cache[uid];
-      var element = cacheEntry.element;
-
+      if (!Event.cache) return;
+      
+      var element = Event.cache[uid].element;
       Event.extend(event, element);
       handler.call(element, event);
     };
@@ -1341,7 +1337,7 @@
   
   function createResponderForCustomEvent(uid, eventName, handler) {
     return function(event) {
-      var cacheEntry = Event.cache[uid], element = cacheEntry.element;
+      var element = Event.cache[uid].element;
 
       if (Object.isUndefined(event.eventName))
         return false;
@@ -1356,8 +1352,8 @@
   
   function createMouseEnterLeaveResponder(uid, eventName, handler) {
     return function(event) {
-      var cacheEntry = Event.cache[uid], element = cacheEntry.element;
-
+      var element = Event.cache[uid].element;
+      
       Event.extend(event, element);
       var parent = event.relatedTarget;
       
